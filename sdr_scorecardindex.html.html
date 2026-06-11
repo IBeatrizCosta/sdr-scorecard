@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SDR Scorecard · Doctoralia B2B</title>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyABCGo_2j5R-o09gQjgPQJMQhTUGegDj_c",
+  authDomain: "sdr-scorecard-doctoralia.firebaseapp.com",
+  projectId: "sdr-scorecard-doctoralia",
+  storageBucket: "sdr-scorecard-doctoralia.firebasestorage.app",
+  messagingSenderId: "23000680941",
+  appId: "1:23000680941:web:2255fe3590a61fbcdd7fe4",
+  measurementId: "G-YC5ZPL29ZP"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Real-time listener
+const q = query(collection(db, 'sdr_candidates'), orderBy('createdAt', 'desc'));
+onSnapshot(q, (snap) => {
+  window.candidates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (window.onCandidatesUpdated) window.onCandidatesUpdated(window.candidates);
+}, (err) => {
+  console.error('Firebase error:', err);
+  window.candidates = JSON.parse(localStorage.getItem('sdr_v2') || '[]');
+  if (window.candidates.length === 0) window.candidates = window.EXAMPLES || [];
+  if (window.onCandidatesUpdated) window.onCandidatesUpdated(window.candidates);
+});
+
+window.dbAdd = async (data) => {
+  const ref = await addDoc(collection(db, 'sdr_candidates'), { ...data, createdAt: Date.now() });
+  return ref.id;
+};
+
+window.dbUpdate = async (id, data) => {
+  await updateDoc(doc(db, 'sdr_candidates', id), data);
+};
+
+window.dbDelete = async (id) => {
+  await deleteDoc(doc(db, 'sdr_candidates', id));
+};
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f2f4f4;--card:#ffffff;--surface:#f5f7f7;--surface2:#e8eded;
+  --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.13);
+  --t1:#1a1a18;--t2:#4a5a58;--t3:#90a0a0;
+  --blue:#00A79D;--blue-bg:#e6f7f6;--blue-b:#99ddd9;
+  --green:#1a7a4a;--green-bg:#eaf7f1;--green-b:#b0dfc8;
+  --red:#c0392b;--red-bg:#fdf0ee;--red-b:#f5c2bc;
+  --amber:#8a5a00;--amber-bg:#fdf5e4;--amber-b:#f0d498;
+  --purple:#00A79D;--purple-bg:#e6f7f6;--purple-b:#99ddd9;
+  --teal:#00897B;--teal-bg:#e0f5f3;--teal-b:#80cbc4;
+  --r:8px;--r2:12px;--r3:16px;
+  --shadow:0 2px 12px rgba(0,0,0,0.07);--shadow2:0 8px 32px rgba(0,0,0,0.12);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;font-size:14px;line-height:1.55;}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:100;}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.logo{font-size:15px;font-weight:600;letter-spacing:-0.02em;}
+.logo span{color:var(--blue);font-weight:400;}
+.topbar-sep{width:1px;height:20px;background:var(--border2);}
+.topbar-sub{font-size:12px;color:var(--t3);}
+.tabs{display:flex;gap:2px;background:var(--surface);border-radius:var(--r);padding:3px;}
+.tab-btn{font-size:12px;font-weight:500;padding:6px 14px;border-radius:6px;border:none;background:transparent;color:var(--t3);cursor:pointer;transition:all .15s;}
+.tab-btn.active{background:var(--card);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.tab-btn:hover:not(.active){color:var(--t2);}
+.main{max-width:1200px;margin:0 auto;padding:20px 24px;}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+.metric{background:var(--card);border-radius:var(--r2);padding:14px 16px;border:1px solid var(--border);border-top:2px solid var(--border2);}
+.metric.m-blue{border-top-color:var(--blue);} .metric.m-green{border-top-color:var(--green);}
+.metric.m-red{border-top-color:var(--red);} .metric.m-amber{border-top-color:var(--amber);}
+.metric.m-purple{border-top-color:var(--purple);}
+.metric-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:5px;}
+.metric-value{font-size:24px;font-weight:600;letter-spacing:-0.03em;}
+.metric-sub{font-size:11px;color:var(--t3);margin-top:2px;}
+.panel{display:none;} .panel.active{display:block;}
+.kanban-board{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start;}
+.kanban-board::-webkit-scrollbar{height:4px;}
+.kanban-board::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:2px;}
+.kanban-col{flex-shrink:0;width:210px;}
+.kanban-col-head{padding:8px 10px;border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.kanban-col-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;}
+.kanban-col-count{font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;background:rgba(0,0,0,0.08);}
+.kanban-cards{display:flex;flex-direction:column;gap:7px;min-height:60px;}
+.k-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:12px;cursor:pointer;transition:all .15s;}
+.k-card:hover{box-shadow:var(--shadow);border-color:var(--border2);transform:translateY(-1px);}
+.k-card-name{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:3px;}
+.k-card-date{font-size:11px;color:var(--t3);margin-bottom:7px;}
+.k-card-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
+.k-card-recruiter{font-size:10px;color:var(--t3);}
+.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;}
+.badge-jr{background:#e8f4fd;color:#1a52a0;} .badge-pl{background:#f0ebfb;color:#5a3a9a;} .badge-sr{background:#fdf5e4;color:#8a5a00;}
+.badge-forte{background:var(--green-bg);color:var(--green);} .badge-duvida{background:var(--amber-bg);color:var(--amber);}
+.badge-reprov{background:var(--red-bg);color:var(--red);} .badge-elim{background:var(--red-bg);color:var(--red);font-size:9px;}
+.col-triagem .kanban-col-head{background:var(--blue-bg);color:var(--blue);}
+.col-rh .kanban-col-head{background:var(--purple-bg);color:var(--purple);}
+.col-lideranca .kanban-col-head{background:var(--amber-bg);color:var(--amber);}
+.col-roleplay .kanban-col-head{background:var(--teal-bg);color:var(--teal);}
+.col-aprovado .kanban-col-head{background:var(--green-bg);color:var(--green);}
+.col-reprovado .kanban-col-head{background:var(--red-bg);color:var(--red);}
+.list-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.list-filters select,.list-filters input{font-size:12px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--card);color:var(--t1);outline:none;}
+.table-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);padding:9px 12px;text-align:left;background:var(--surface);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--t2);}
+td.td-name{font-weight:600;color:var(--t1);}
+tr:last-child td{border-bottom:none;} tr:hover td{background:var(--surface);}
+.empty-state{text-align:center;padding:3rem;color:var(--t3);font-size:13px;}
+.dados-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.dados-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+.dados-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;}
+.dados-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin-bottom:12px;}
+.funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.funnel-label{font-size:12px;color:var(--t2);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.funnel-track{flex:1;background:var(--surface2);border-radius:3px;height:14px;overflow:hidden;}
+.funnel-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.funnel-val{font-size:11px;font-weight:600;color:var(--t1);width:24px;text-align:right;}
+.funnel-pct{font-size:10px;color:var(--t3);width:32px;text-align:right;}
+.seniority-pills{display:flex;gap:8px;}
+.sen-pill{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px;text-align:center;}
+.sen-pill-val{font-size:22px;font-weight:600;letter-spacing:-0.02em;}
+.sen-pill-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;}
+.avg-big{font-size:28px;font-weight:600;letter-spacing:-0.03em;}
+.rubrica-hint{display:none;font-size:11px;color:var(--teal);background:var(--teal-bg);border:1px solid var(--teal-b);border-radius:var(--r);padding:5px 10px;margin:4px 0 6px;line-height:1.5;}
+.advance-banner{display:none;align-items:center;justify-content:space-between;gap:12px;background:var(--green-bg);border:1px solid var(--green-b);border-radius:var(--r2);padding:12px 16px;margin-bottom:14px;}
+.advance-banner.show{display:flex;}
+.advance-banner-text{font-size:13px;color:var(--green);font-weight:500;}
+.advance-banner-sub{font-size:11px;color:var(--green);opacity:.8;margin-top:2px;}
+.advance-btn{font-size:12px;font-weight:600;padding:7px 16px;border-radius:var(--r);border:none;background:var(--green);color:#fff;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.advance-btn:hover{opacity:.85;}
+.advance-dismiss{font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;opacity:.7;padding:4px;}
+.advance-dismiss:hover{opacity:1;}
+.score-item-wrap{border-bottom:1px solid var(--border);}
+.score-item-wrap:last-child{border-bottom:none;}
+.score-item-wrap .score-item{border-bottom:none;}
+.sg-toggle{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--blue);cursor:pointer;transition:all .12s;margin-right:6px;flex-shrink:0;}
+.sg-toggle:hover,.sg-toggle-open{background:var(--blue-bg);border-color:var(--blue-b);}
+.score-guide{background:var(--blue-bg);border:1px solid var(--blue-b);border-radius:var(--r);padding:10px 13px;margin:0 0 8px 0;}
+.sg-pergunta{font-size:12.5px;color:var(--blue);font-style:italic;line-height:1.6;margin-bottom:6px;font-weight:500;}
+.sg-esperado{font-size:11px;color:var(--green);margin-bottom:5px;line-height:1.5;}
+.sg-gatilho{font-size:11px;color:var(--t2);margin-bottom:4px;line-height:1.5;padding-left:8px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--card);border-radius:var(--r3);border:1px solid var(--border2);width:720px;max-width:100%;box-shadow:var(--shadow2);}
+.modal-top{padding:20px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.modal-title{font-size:16px;font-weight:600;}
+.modal-close{background:none;border:none;color:var(--t3);cursor:pointer;font-size:22px;line-height:1;padding:0;}
+.modal-close:hover{color:var(--t1);}
+.modal-tabs{display:flex;gap:0;padding:0 24px;border-bottom:1px solid var(--border);margin-top:14px;overflow-x:auto;}
+.modal-tab{font-size:12px;font-weight:500;padding:9px 13px;border:none;background:none;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .15s;}
+.modal-tab:hover{color:var(--t2);}
+.modal-tab.active{color:var(--t1);border-bottom-color:var(--t1);}
+.modal-body{padding:20px 24px 24px;}
+.mpanel{display:none;} .mpanel.active{display:block;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);}
+.form-input,.form-select,.form-textarea{font-size:13px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--card);color:var(--t1);outline:none;transition:border-color .15s;font-family:inherit;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--blue);}
+.form-textarea{resize:vertical;min-height:72px;line-height:1.55;}
+.field-sep{height:1px;background:var(--border);margin:16px 0;}
+.field-sec-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.triagem-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px;}
+.triagem-item.tri-sim{background:var(--green-bg);border-color:var(--green-b);}
+.triagem-item.tri-nao{background:var(--red-bg);border-color:var(--red-b);}
+.triagem-text{font-size:13px;color:var(--t1);line-height:1.4;flex:1;}
+.triagem-sub{font-size:11px;color:var(--t3);margin-top:2px;}
+.t-btn{font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;border:1px solid var(--border2);background:var(--surface);color:var(--t3);cursor:pointer;transition:all .12s;}
+.t-btn.sim-active{background:var(--green);color:#fff;border-color:var(--green);}
+.t-btn.nao-active{background:var(--red);color:#fff;border-color:var(--red);}
+.triagem-result{padding:12px 14px;border-radius:var(--r2);margin-top:12px;font-size:13px;font-weight:500;}
+.tri-res-passa{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b);}
+.tri-res-nao{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b);}
+.tri-res-pend{background:var(--surface);color:var(--t3);border:1px solid var(--border);}
+.score-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.score-item:last-child{border-bottom:none;}
+.score-item-label{font-size:13px;color:var(--t1);flex:1;}
+.score-item-weight{font-size:10px;color:var(--t3);width:28px;text-align:right;flex-shrink:0;}
+.score-stars{display:flex;gap:3px;flex-shrink:0;}
+.star{width:26px;height:26px;border-radius:5px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--t3);transition:all .12s;user-select:none;}
+.star:hover,.star.lit{background:var(--amber-bg);border-color:var(--amber-b);color:var(--amber);}
+.score-total-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;}
+.score-total-label{font-size:12px;color:var(--t2);}
+.score-total-val{font-size:18px;font-weight:600;}
+.score-total-val.forte{color:var(--green);} .score-total-val.duvida{color:var(--amber);} .score-total-val.reprov{color:var(--red);}
+.elim-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px;}
+.elim-item.elim-sim{background:var(--red-bg);border-color:var(--red-b);}
+.elim-label{font-size:13px;color:var(--t1);flex:1;}
+.consol-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
+.consol-row:last-child{border-bottom:none;}
+.consol-row-label{font-size:12px;color:var(--t2);}
+.consol-row-val{font-size:12px;font-weight:600;}
+.consol-final{font-size:22px;font-weight:600;letter-spacing:-0.02em;}
+.consol-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px;}
+.sen-confirm{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 11px;border-radius:var(--r);margin-bottom:12px;}
+.sen-confirm.match{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b);}
+.sen-confirm.mismatch{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b);}
+.dec-btns{display:flex;gap:8px;margin:10px 0;}
+.dec-btn{font-size:13px;font-weight:600;padding:8px 16px;border-radius:var(--r);cursor:pointer;border:1px solid;transition:all .15s;}
+.dec-btn.ok{background:var(--green-bg);color:var(--green);border-color:var(--green-b);}
+.dec-btn.ok:hover,.dec-btn.ok.sel{background:var(--green);color:#fff;border-color:var(--green);}
+.dec-btn.mid{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-b);}
+.dec-btn.mid:hover,.dec-btn.mid.sel{background:var(--amber);color:#fff;border-color:var(--amber);}
+.dec-btn.ko{background:var(--red-bg);color:var(--red);border-color:var(--red-b);}
+.dec-btn.ko:hover,.dec-btn.ko.sel{background:var(--red);color:#fff;border-color:var(--red);}
+.btn{font-size:13px;padding:8px 16px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--t1);cursor:pointer;transition:all .15s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:var(--t1);color:#fff;border-color:var(--t1);}
+.btn-primary:hover{opacity:.85;}
+.btn-danger{background:var(--red-bg);color:var(--red);border-color:var(--red-b);}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.modal-footer{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-top:1px solid var(--border);gap:10px;}
+.alert{padding:10px 14px;border-radius:var(--r);font-size:12px;margin-bottom:12px;}
+.alert-info{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-b);}
+.alert-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b);}
+.sen-tag{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:var(--r);}
+.sen-tag.jr{background:#e8f4fd;color:#1a52a0;border:1px solid #c2d4f0;}
+.sen-tag.pl{background:#f0ebfb;color:#5a3a9a;border:1px solid #cfc0f0;}
+.sen-tag.sr{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b);}
+@media(max-width:640px){
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .dados-grid,.dados-grid-3{grid-template-columns:1fr;}
+  .form-row{grid-template-columns:1fr;}
+  .main{padding:14px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Doctoralia <span>· SDR Scorecard</span></div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-sub">Doctoralia · B2B Commercial</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchView('kanban',this)">Kanban</button>
+      <button class="tab-btn" onclick="switchView('lista',this)">Lista</button>
+      <button class="tab-btn" onclick="switchView('dados',this)">Dados</button>
+    </div>
+    <button class="btn btn-primary" onclick="openNew()">+ Candidato</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="metrics" id="metrics"></div>
+  <div class="panel active" id="view-kanban"><div class="kanban-board" id="kanban-board"></div></div>
+  <div class="panel" id="view-lista">
+    <div class="list-filters">
+      <select id="fl-etapa" onchange="renderLista()"><option value="">Todas as etapas</option><option>Triagem</option><option>RH</option><option>Liderança</option><option>Roleplay</option><option>Aprovado</option><option>Reprovado</option></select>
+      <select id="fl-sen" onchange="renderLista()"><option value="">Toda senioridade</option><option value="Jr">Júnior</option><option value="Pl">Pleno</option><option value="Sr">Sênior</option></select>
+      <select id="fl-rec" onchange="renderLista()">
+        <option value="">Todos os recrutadores</option>
+        <option>Bia</option>
+        <option>Marcos</option>
+        <option>Mirella</option>
+        <option>Carol</option>
+        <option>Luana</option>
+        <option>Bruna</option>
+        <option>Anna Carol</option>
+        <option>Fernanda</option>
+      </select>
+      <select id="fl-nota" onchange="renderLista()"><option value="">Toda nota</option><option value="Nota 1">Nota 1 — Forte</option><option value="Nota 2">Nota 2 — Dúvida</option><option value="Nota 3">Nota 3 — Reprovado</option></select>
+      <input type="text" id="fl-busca" placeholder="Buscar candidato..." oninput="renderLista()" style="min-width:160px;"/>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Candidato</th><th>Recrutador</th><th>Etapa</th><th>Senioridade</th><th>% RH</th><th>% Liderança</th><th>% Roleplay</th><th>% Final</th><th>Nota</th><th>Data</th><th></th></tr></thead><tbody id="lista-tbody"></tbody></table></div>
+  </div>
+  <div class="panel" id="view-dados">
+    <div class="dados-grid">
+      <div class="dados-card"><div class="dados-title">Funil de candidatos</div><div id="funil-chart"></div></div>
+      <div class="dados-card">
+        <div class="dados-title">Distribuição por senioridade</div><div class="seniority-pills" id="sen-pills"></div>
+        <div style="margin-top:14px;"><div class="dados-title">Resultado dos avaliados</div><div id="result-chart"></div></div>
+      </div>
+    </div>
+    <div class="dados-grid-3">
+      <div class="dados-card"><div class="dados-title">Média % RH / People</div><div id="avg-rh"></div></div>
+      <div class="dados-card"><div class="dados-title">Média % Liderança</div><div id="avg-lid"></div></div>
+      <div class="dados-card"><div class="dados-title">Média % Roleplay</div><div id="avg-role"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-top">
+      <div><div class="modal-title" id="modal-title">Novo candidato</div><div id="modal-sen-tag" style="margin-top:4px;"></div></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchMTab(0,this)">Identificação</button>
+      <button class="modal-tab" onclick="switchMTab(1,this)">Triagem</button>
+      <button class="modal-tab" onclick="switchMTab(2,this)">RH / People</button>
+      <button class="modal-tab" onclick="switchMTab(3,this)">Liderança</button>
+      <button class="modal-tab" onclick="switchMTab(4,this)">Roleplay</button>
+      <button class="modal-tab" onclick="switchMTab(5,this)">Eliminatórios</button>
+      <button class="modal-tab" onclick="switchMTab(6,this)">Consolidação</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="mpanel active" id="mp-0">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="f-nome" placeholder="Nome completo"/></div>
+          <div class="form-group"><label class="form-label">Data da entrevista</label><input class="form-input" type="date" id="f-data"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Recrutador(a) *</label>
+            <select class="form-select" id="f-recrutador">
+              <option value="">Selecionar</option>
+              <option>Bia</option>
+              <option>Marcos</option>
+              <option>Mirella</option>
+              <option>Carol</option>
+              <option>Luana</option>
+              <option>Bruna</option>
+              <option>Anna Carol</option>
+              <option>Fernanda</option>
+            </select></div>
+          <div class="form-group"><label class="form-label">Coordenador / HM</label>
+            <select class="form-select" id="f-coordenador">
+              <option value="">Selecionar</option>
+              <option>Lucas</option>
+              <option>Josi</option>
+              <option>Raysa</option>
+              <option>Gabriel</option>
+              <option>Talita</option>
+              <option>Giselle</option>
+            </select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Perfil Sólides</label><input class="form-input" id="f-solides" placeholder="Ex: CE, PA"/></div>
+          <div class="form-group"><label class="form-label">Canal avaliado</label><select class="form-select" id="f-canal"><option value="">—</option><option>Roleplay</option><option>Entrevista Liderança</option><option>Triagem</option></select></div>
+        </div>
+        <div class="field-sep"></div>
+        <div class="field-sec-title">Senioridade</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Anos em vendas / SDR / BDR *</label>
+            <input class="form-input" type="number" id="f-anos" min="0" max="30" step="0.5" placeholder="Ex: 2.5" oninput="calcSen()"/>
+            <div style="font-size:11px;color:var(--t3);margin-top:3px;">Só experiência com meta / prospecção ativa</div>
+          </div>
+          <div class="form-group"><label class="form-label">Estimada</label><div id="sen-estimada" style="padding:8px 0;font-size:13px;color:var(--t3);">Preencha →</div></div>
+        </div>
+        <div class="field-sep"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Etapa atual *</label><select class="form-select" id="f-etapa-c"><option>Triagem</option><option>RH</option><option>Liderança</option><option>Roleplay</option><option>Aprovado</option><option>Reprovado</option></select></div>
+          <div class="form-group"><label class="form-label">Observação</label><input class="form-input" id="f-obs" placeholder="Notas gerais"/></div>
+        </div>
+      </div>
+
+      <div class="mpanel" id="mp-1">
+        <div class="alert alert-info">Passa se: Ensino Superior = Sim <strong>E</strong> pelo menos 3 dos outros 4 = Sim</div>
+        <div class="field-sec-title">Avaliado por</div>
+        <select class="form-select" id="t-aval">
+              <option value="">Selecionar</option>
+              <option>Bia</option>
+              <option>Marcos</option>
+              <option>Mirella</option>
+              <option>Carol</option>
+              <option>Luana</option>
+              <option>Bruna</option>
+              <option>Anna Carol</option>
+              <option>Fernanda</option>
+            </select><div style="margin-bottom:14px;"></div>
+        <div id="triagem-items"></div>
+        <div id="triagem-result" class="triagem-result tri-res-pend">Preencha os campos acima</div>
+        <div class="advance-banner" id="adv-triagem">
+          <div><div class="advance-banner-text">✓ Triagem aprovada!</div><div class="advance-banner-sub">Avançar para RH / People?</div></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="advance-dismiss" onclick="dismissAdvance('adv-triagem')">agora não</button>
+            <button class="advance-btn" onclick="doAdvance('RH','adv-triagem')">Avançar para RH →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mpanel" id="mp-2">
+        <div class="field-sec-title">Avaliado por</div>
+        <select class="form-select" id="rh-aval">
+              <option value="">Selecionar</option>
+              <option>Bia</option>
+              <option>Marcos</option>
+              <option>Mirella</option>
+              <option>Carol</option>
+              <option>Luana</option>
+              <option>Bruna</option>
+              <option>Anna Carol</option>
+              <option>Fernanda</option>
+            </select><div style="margin-bottom:14px;"></div>
+        <div id="rh-items"></div>
+        <div class="score-total-bar"><span class="score-total-label">% RH / People</span><span class="score-total-val" id="rh-total">—</span></div>
+        <div style="font-size:11px;color:var(--red);margin-top:5px;min-height:16px;" id="rh-floor-msg"></div>
+        <div class="advance-banner" id="adv-rh">
+          <div><div class="advance-banner-text">✓ RH avaliado!</div><div class="advance-banner-sub">Avançar para Liderança Comercial?</div></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="advance-dismiss" onclick="dismissAdvance('adv-rh')">agora não</button>
+            <button class="advance-btn" onclick="doAdvance('Liderança','adv-rh')">Avançar para Liderança →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mpanel" id="mp-3">
+        <div class="field-sec-title">Avaliado por</div>
+        <select class="form-select" id="lid-aval">
+              <option value="">Selecionar coordenador</option>
+              <option>Lucas</option>
+              <option>Josi</option>
+              <option>Raysa</option>
+              <option>Gabriel</option>
+              <option>Talita</option>
+              <option>Giselle</option>
+            </select><div style="margin-bottom:14px;"></div>
+        <div id="lid-items"></div>
+        <div class="score-total-bar"><span class="score-total-label">% Liderança Comercial</span><span class="score-total-val" id="lid-total">—</span></div>
+        <div class="advance-banner" id="adv-lid">
+          <div><div class="advance-banner-text">✓ Liderança avaliada!</div><div class="advance-banner-sub">Avançar para Roleplay?</div></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="advance-dismiss" onclick="dismissAdvance('adv-lid')">agora não</button>
+            <button class="advance-btn" onclick="doAdvance('Roleplay','adv-lid')">Avançar para Roleplay →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mpanel" id="mp-4">
+        <div class="field-sec-title">Avaliado por</div>
+        <select class="form-select" id="role-aval">
+              <option value="">Selecionar</option>
+              <option>Bia</option>
+              <option>Marcos</option>
+              <option>Mirella</option>
+              <option>Carol</option>
+              <option>Luana</option>
+              <option>Bruna</option>
+              <option>Anna Carol</option>
+              <option>Fernanda</option>
+            </select><div style="margin-bottom:14px;"></div>
+        <div id="role-items"></div>
+        <div class="score-total-bar"><span class="score-total-label">% Roleplay</span><span class="score-total-val" id="role-total">—</span></div>
+        <div class="advance-banner" id="adv-role">
+          <div><div class="advance-banner-text">✓ Roleplay avaliado!</div><div class="advance-banner-sub">Ver Consolidação e tomar decisão?</div></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="advance-dismiss" onclick="dismissAdvance('adv-role')">agora não</button>
+            <button class="advance-btn" onclick="doAdvance(null,'adv-role',6)">Ver Consolidação →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mpanel" id="mp-5">
+        <div class="alert alert-danger">Qualquer <strong>Sim</strong> reprova automaticamente.</div>
+        <div id="elim-items"></div>
+        <div id="elim-result" class="triagem-result tri-res-pend" style="margin-top:10px;">Sem flag eliminatório</div>
+      </div>
+
+      <div class="mpanel" id="mp-6">
+        <div class="consol-box" id="consol-scores">—</div>
+        <div id="consol-sen"></div>
+        <div class="field-sep"></div>
+        <div class="field-sec-title">Decisão final</div>
+        <div class="dec-btns">
+          <button class="dec-btn ok" id="dec-ok" onclick="setDec('Aprovado')">✓ Aprovado</button>
+          <button class="dec-btn mid" id="dec-mid" onclick="setDec('Segunda avaliação')">⚐ Segunda avaliação</button>
+          <button class="dec-btn ko" id="dec-ko" onclick="setDec('Reprovado')">✕ Reprovado</button>
+        </div>
+        <div class="form-row" style="margin-top:8px;">
+          <div class="form-group"><label class="form-label">Principal força</label><input class="form-input" id="f-forca" placeholder="Ex: Energia e foco em resultado"/></div>
+          <div class="form-group"><label class="form-label">Principal risco</label><input class="form-input" id="f-risco" placeholder="Ex: Pouca experiência com CRM"/></div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Evidências</label><textarea class="form-textarea" id="f-evidencias" placeholder="Exemplos concretos da entrevista..."></textarea></div>
+        <div class="form-group"><label class="form-label">Motivo da decisão</label><textarea class="form-textarea" id="f-motivo" rows="2" placeholder="Justificativa para o parecer"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btn-del" onclick="deleteCand()" style="display:none;">Remover</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveCand()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const TRIAGEM_DEF = [
+  {id:'superior', label:'Ensino Superior', sub:'Superior completo ou cursando', obrig:true},
+  {id:'venda_ativa', label:'Experiência com venda ativa / SDR / BDR', sub:'CV mostra prospecção/SDR com meta'},
+  {id:'volume', label:'Rotina de volume / cobrança / prospecção', sub:'Call center, telemarketing, varejo com meta'},
+  {id:'sdr_1ano', label:'Experiência como SDR com mais de 1 ano', sub:'1 ano ou mais como SDR/BDR/pré-vendas'},
+  {id:'comunicacao_cv', label:'Comunicação estruturada (CV / LinkedIn)', sub:'Texto claro, sem erros graves, LinkedIn cuidado'},
+];
+const RH_DEF = [
+  {id:'motivacao',label:'Motivação por vendas / prospecção',peso:5},
+  {id:'energia',label:'Energia e comunicação inicial',peso:5},
+  {id:'coachability',label:'Coachability',peso:4},
+  {id:'foco_resultado',label:'Foco em resultado',peso:4},
+  {id:'aderencia_volume',label:'Aderência à rotina de volume e rejeição',peso:5},
+  {id:'clareza_carreira',label:'Clareza de carreira / ambição',peso:3},
+  {id:'maturidade',label:'Maturidade e Responsabilidade',peso:4},
+];
+const RH_GUIDES = {
+  motivacao: {
+    pergunta: "Me conta o momento em que voce percebeu que queria trabalhar com vendas. O que te motivou?",
+    esperado: "Drive financeiro, objetivos claros, proposito.",
+    gatilhos: ["E prospeccao ativa — abordar quem nao esta te esperando. Como voce se mantem motivado?","Voce preferiria outra parte do processo?"]
+  },
+  energia: {
+    pergunta: "Avaliar ao vivo: ritmo, clareza, engajamento e escuta ativa durante toda a conversa.",
+    esperado: "Segue direcionamento dado. Ex: se pediu foco nas 3 ultimas experiencias, mantem o foco. Respostas com storytelling.",
+    gatilhos: ["Fazer mais de uma pergunta em conjunto e observar se responde cada uma com coerencia.","Sinal fraco: respostas curtas, tom apatico, sem energia, sem storytelling para contar a propria carreira."]
+  },
+  coachability: {
+    pergunta: "Me conta uma situacao em que voce recebeu um feedback que nao concordou na hora. O que voce fez?",
+    esperado: "Absorveu, refletiu e mudou algo concreto.",
+    gatilhos: ["Mudou algo? O que?","Essa mudanca resultou em algo?"]
+  },
+  foco_resultado: {
+    pergunta: "Qual era a sua meta no ultimo trabalho? Voce batia? Me conta o mes em que mais chegou perto de nao bater — o que aconteceu e o que voce fez?",
+    esperado: "Numero concreto, autoconsciencia sobre performance, acao diante da pressao.",
+    gatilhos: ["Me da o numero exato.","Era uma meta facil de atingir, certo?"]
+  },
+  aderencia_volume: {
+    pergunta: "Quantas ligacoes ou contatos voce fazia por dia no pico? O que te faz continuar com energia mesmo com muitos noes?",
+    esperado: "Numero real, tolerancia a rejeicao, resiliencia de rotina.",
+    gatilhos: ["Um case negativo que te marcou? Algum cliente que voce perdeu? Por que te marcou?","Quanto tempo levou ate o nao parar de te afetar?"]
+  },
+  clareza_carreira: {
+    pergunta: "Onde voce quer estar daqui a 2 anos? O que te atrai nessa area?",
+    esperado: "Ambicao clara, alinhada com crescimento possivel na Doctoralia.",
+    gatilhos: ["Se daqui a 1 ano voce ainda estiver prospectando, como voce se sente com isso?","Alinhar expectativa de crescimento aqui na Doc."]
+  },
+  maturidade: {
+    pergunta: "Me conta em detalhes qual foi o maior erro que voce cometeu no trabalho. O que aconteceu?",
+    esperado: "Auto-responsabilizacao, sem culpar contexto ou terceiros. Aprendizado concreto.",
+    gatilhos: ["Aprofundar: o que exatamente foi sua responsabilidade nisso?","Observar se puxa o erro pra si ou joga pra fora."]
+  },
+};
+
+const LID_GUIDES = {
+  int_comercial: {
+    pergunta: "Voce tem 100 leads e so da pra falar com 10 hoje. Como escolhe? O que faz um lead valer mais?",
+    forte: "Prioriza por potencial, fit e timing. Raciocina como dono do numero.",
+    fraco: "Escolha aleatoria, sem criterio. Falava com todos.",
+    gatilhos: ["O que voce olhava no lead antes de ligar?","Como sabia que era o momento certo de abordar?"]
+  },
+  curiosidade: {
+    pergunta: "Vai abordar uma clinica que nao conhece. O que precisa descobrir antes de falar com ela?",
+    forte: "Faz boas perguntas. Quer entender contexto, dor e quem decide.",
+    fraco: "Superficial. Nao investiga. Ja parte pro pitch.",
+    gatilhos: ["Que ferramentas voce usava pra pesquisar antes?","Me da um exemplo de uma abordagem que voce preparou bem."]
+  },
+  visao_funil: {
+    pergunta: "Do primeiro contato ate a reuniao marcada, quais sao as etapas? Onde mais se perde gente?",
+    forte: "Entende etapas, conversao e gargalos do funil.",
+    fraco: "Nao enxerga funil. Acha que e so ligar e marcar.",
+    gatilhos: ["Qual era sua taxa de conversao de contato pra reuniao?","O que voce fazia quando a conversao caía?"]
+  },
+  criar_demanda: {
+    pergunta: "O decisor diz: ta tudo bem por aqui, nao preciso. O que voce faz?",
+    forte: "Cria dor e contraste. Provoca reflexao. Gera interesse onde nao havia.",
+    fraco: "Aceita o ta bom e desiste. Ou empurra produto na marra.",
+    gatilhos: ["Me faz esse roleplay agora — eu sou o decisor.","Qual foi a conta mais fria que voce converteu? Como foi?"]
+  },
+  comunicacao_obj: {
+    pergunta: "Me explica em 30 segundos o que sua ultima empresa vendia e pra quem.",
+    forte: "Claro, estruturado, conduz a conversa com seguranca.",
+    fraco: "Prolixo, se perde, sem estrutura.",
+    gatilhos: ["Como voce explicava o produto pra um decisor que nao entendia nada?","Tinha um pitch padrao ou adaptava por conta?"]
+  },
+  mat_rejeicao: {
+    pergunta: "Conta de uma abordagem ou negociacao que deu muito errado. O que aprendeu?",
+    forte: "Lida bem, aprende, nao leva pro pessoal.",
+    fraco: "Ressentido, evita o tema, paralisa diante do nao.",
+    gatilhos: ["Quanto tempo levou ate o nao parar de te afetar?","O que voce mudou depois disso?"]
+  },
+  icp: {
+    pergunta: "Quem decide a compra numa clinica? O que tira o sono dessa pessoa?",
+    forte: "Entende porte e perfil de clinica, o decisor (dono/gestor) e as dores (no-show, agenda, faturamento).",
+    fraco: "Nao sabe quem decide. Generaliza. Responde o medico e para ai.",
+    gatilhos: ["Como voce diferenciava o decisor do influenciador?","Me da um exemplo de como voce abordou um dono de clinica."]
+  },
+};
+
+const LID_DEF = [
+  {id:'int_comercial',label:'Inteligência comercial',peso:5},
+  {id:'curiosidade',label:'Curiosidade investigativa',peso:5},
+  {id:'visao_funil',label:'Visão de funil',peso:4},
+  {id:'criar_demanda',label:'Capacidade de criar demanda',peso:5},
+  {id:'comunicacao_obj',label:'Comunicação objetiva',peso:5},
+  {id:'mat_rejeicao',label:'Maturidade para lidar com rejeição',peso:4},
+  {id:'icp',label:'Entendimento de ICP / clínica / decisor',peso:4},
+];
+const ROLE_DEF = [
+  {id:'pesquisa',label:'Pesquisa da conta',peso:5},
+  {id:'abord_wpp',label:'Abordagem (WhatsApp)',peso:5},
+  {id:'abertura',label:'Abertura de ligação',peso:5},
+  {id:'comunic',label:'Comunicação objetiva',peso:5},
+  {id:'contorno',label:'Contorno de objeção',peso:5},
+  {id:'geracao_valor',label:'Geração de valor',peso:4},
+  {id:'escuta',label:'Escuta ativa',peso:4},
+  {id:'cognitiva',label:'Capacidade cognitiva',peso:5},
+  {id:'adapt',label:'Adaptabilidade',peso:5},
+  {id:'reacao_fb',label:'Reação à mudança / feedback',peso:5},
+  {id:'compromisso',label:'Firmar compromisso',peso:4},
+];
+const ELIM_DEF = [
+  'Não quer prospecção ativa',
+  'Não aceita rotina de volume / cadência',
+  'Baixa abertura a feedback',
+  'Comunicação muito confusa',
+  'Não faz roleplay estruturado',
+  'Baixa energia para outbound',
+  'Não aceita modelo / cultura / cobrança',
+];
+const ETAPAS = ['Triagem','RH','Liderança','Roleplay','Aprovado','Reprovado'];
+const COL_COLORS = ['#1a52a0','#5a3a9a','#8a5a00','#0a7a7a','#1a7a4a','#c0392b'];
+
+// ── EXAMPLE DATA ──────────────────────────────────────────────────
+const EXAMPLES = [
+  {id:'ex1',nome:'Ana Luiza Thomé',recrutador:'Bia',coordenador:'Giselle',data:'2026-05-28',solides:'CE',canal:'Roleplay',anosVendas:2.5,senioridade:'Pl',etapa:'Aprovado',obs:'Reverteu objeção de preço com ROI',
+   triagem:{superior:'Sim',venda_ativa:'Sim',volume:'Sim',sdr_1ano:'Sim',comunicacao_cv:'Sim'},triagemAval:'Bia',
+   rhS:{motivacao:5,energia:5,coachability:4,foco_resultado:5,aderencia_volume:5,clareza_carreira:4,maturidade:4},rhAval:'Bia',
+   lidS:{int_comercial:5,curiosidade:4,visao_funil:4,criar_demanda:5,comunicacao_obj:5,mat_rejeicao:4,icp:4},lidAval:'Raysa',
+   roleS:{pesquisa:5,abord_wpp:5,abertura:4,comunic:5,contorno:5,geracao_valor:4,escuta:4,cognitiva:5,adapt:5,reacao_fb:4,compromisso:4},roleAval:'Lucas',
+   elimS:{0:'Não',1:'Não',2:'Não',3:'Não',4:'Não',5:'Não',6:'Não'},
+   pRH:87,pLid:84,pRole:86,pFinal:86,eliminado:false,nota:'Nota 1',decisao:'Aprovado',
+   forca:'Energia altíssima, cria demanda com naturalidade',risco:'Pouca experiência com CRM avançado',
+   evidencias:'Reverteu objeção de preço com argumento de ROI. Discovery cirúrgico.',motivo:'Nota 1 sólida nos três blocos.',createdAt:Date.now()-10*86400000},
+  {id:'ex2',nome:'Marcos Vinicius Souza',recrutador:'Marcos',coordenador:'',data:'2026-06-01',solides:'EP',canal:'Entrevista Liderança',anosVendas:1.2,senioridade:'Jr',etapa:'Liderança',obs:'Boa energia, funil ainda raso',
+   triagem:{superior:'Sim',venda_ativa:'Sim',volume:'Sim',sdr_1ano:'Não',comunicacao_cv:'Sim'},triagemAval:'Marcos',
+   rhS:{motivacao:4,energia:5,coachability:4,foco_resultado:4,aderencia_volume:4,clareza_carreira:3,maturidade:3},rhAval:'Marcos',
+   lidS:{int_comercial:3,curiosidade:4,visao_funil:3,criar_demanda:3,comunicacao_obj:4,mat_rejeicao:3,icp:3},lidAval:'Raysa',
+   roleS:{},roleAval:'',elimS:{0:'Não',1:'Não',2:'Não',3:'Não',4:'Não',5:'Não',6:'Não'},
+   pRH:74,pLid:66,pRole:null,pFinal:70,eliminado:false,nota:'Nota 2',decisao:null,
+   forca:'Energia boa, aceita feedback rápido',risco:'Visão de funil rasa',evidencias:'Não diferenciou problema de lista de execução.',motivo:'',createdAt:Date.now()-5*86400000},
+  {id:'ex3',nome:'Carla Regina Matos',recrutador:'Mirella',coordenador:'Giselle',data:'2026-06-03',solides:'CA',canal:'Roleplay',anosVendas:3.5,senioridade:'Pl',etapa:'Reprovado',obs:'Travou no roleplay',
+   triagem:{superior:'Sim',venda_ativa:'Sim',volume:'Sim',sdr_1ano:'Sim',comunicacao_cv:'Sim'},triagemAval:'Mirella',
+   rhS:{motivacao:4,energia:4,coachability:2,foco_resultado:3,aderencia_volume:3,clareza_carreira:3,maturidade:3},rhAval:'Mirella',
+   lidS:{int_comercial:4,curiosidade:3,visao_funil:3,criar_demanda:3,comunicacao_obj:3,mat_rejeicao:2,icp:3},lidAval:'Raysa',
+   roleS:{pesquisa:3,abord_wpp:3,abertura:3,comunic:3,contorno:2,geracao_valor:2,escuta:3,cognitiva:3,adapt:2,reacao_fb:1,compromisso:2},roleAval:'Lucas',
+   elimS:{0:'Não',1:'Não',2:'Sim',3:'Não',4:'Não',5:'Não',6:'Não'},
+   pRH:62,pLid:66,pRole:52,pFinal:59,eliminado:true,nota:'Eliminatório',decisao:'Reprovado',
+   forca:'Boa base comercial',risco:'Reação defensiva a feedback',evidencias:'Travou quando avaliador propôs ajuste no roleplay.',motivo:'Flag eliminatório + floor comportamental.',createdAt:Date.now()-3*86400000},
+  {id:'ex4',nome:'Rafael Biagioni',recrutador:'Bia',coordenador:'',data:'2026-06-05',solides:'PC',canal:'Triagem',anosVendas:0.8,senioridade:'Jr',etapa:'Triagem',obs:'Perfil jovem, vindo de telemarketing',
+   triagem:{superior:'Não',venda_ativa:'Sim',volume:'Sim',sdr_1ano:'Não',comunicacao_cv:'Sim'},triagemAval:'Bia',
+   rhS:{},rhAval:'',lidS:{},lidAval:'',roleS:{},roleAval:'',elimS:{},
+   pRH:null,pLid:null,pRole:null,pFinal:null,eliminado:false,nota:null,decisao:null,
+   forca:'',risco:'',evidencias:'',motivo:'',createdAt:Date.now()-86400000},
+  {id:'ex5',nome:'Dhiely Paloma Ferreira',recrutador:'Marcos',coordenador:'Giselle',data:'2026-06-04',solides:'PE',canal:'Roleplay',anosVendas:4.2,senioridade:'Sr',etapa:'Roleplay',obs:'Perfil sênior, referência em outbound',
+   triagem:{superior:'Sim',venda_ativa:'Sim',volume:'Sim',sdr_1ano:'Sim',comunicacao_cv:'Sim'},triagemAval:'Marcos',
+   rhS:{motivacao:5,energia:5,coachability:4,foco_resultado:5,aderencia_volume:4,clareza_carreira:4,maturidade:5},rhAval:'Marcos',
+   lidS:{int_comercial:5,curiosidade:5,visao_funil:4,criar_demanda:5,comunicacao_obj:4,mat_rejeicao:4,icp:4},lidAval:'Raysa',
+   roleS:{pesquisa:4,abord_wpp:5,abertura:4,comunic:4,contorno:4,geracao_valor:4,escuta:4,cognitiva:4,adapt:4,reacao_fb:4,compromisso:3},roleAval:'',
+   elimS:{0:'Não',1:'Não',2:'Não',3:'Não',4:'Não',5:'Não',6:'Não'},
+   pRH:85,pLid:84,pRole:74,pFinal:81,eliminado:false,nota:'Nota 1',decisao:null,
+   forca:'Raciocínio comercial sólido',risco:'Roleplay ainda não concluído',evidencias:'RH e Liderança nota 1.',motivo:'',createdAt:Date.now()-2*86400000},
+  {id:'ex6',nome:'Giovanna Malaquias',recrutador:'Mirella',coordenador:'',data:'2026-06-06',solides:'EC',canal:'Entrevista Liderança',anosVendas:1.8,senioridade:'Jr',etapa:'RH',obs:'',
+   triagem:{superior:'Sim',venda_ativa:'Sim',volume:'Sim',sdr_1ano:'Não',comunicacao_cv:'Sim'},triagemAval:'Mirella',
+   rhS:{motivacao:3,energia:3,coachability:3,foco_resultado:3,aderencia_volume:2,clareza_carreira:3,maturidade:3},rhAval:'Mirella',
+   lidS:{},lidAval:'',roleS:{},roleAval:'',elimS:{},
+   pRH:55,pLid:null,pRole:null,pFinal:55,eliminado:false,nota:'Nota 3',decisao:null,
+   forca:'Comunicação razoável',risco:'Aderência a volume baixa',evidencias:'',motivo:'',createdAt:Date.now()-86400000},
+];
+
+// ── STATE ──────────────────────────────────────────────────────────
+let candidates = JSON.parse(localStorage.getItem('sdr_v2') || 'null');
+if (!candidates) { candidates = EXAMPLES; saveLocal(); }
+let editId = null, curDec = null;
+let tS={}, rhS={}, lidS={}, roleS={}, elimS={};
+
+function saveLocal(){ localStorage.setItem('sdr_v2', JSON.stringify(candidates)); }
+function todayISO(){ return new Date().toISOString().split('T')[0]; }
+function fmtDate(iso){ if(!iso) return '—'; const[y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+
+// ── SCORE CALC ──────────────────────────────────────────────────────
+function calcBlock(def, scores){
+  let tw=0,ts=0;
+  def.forEach(it=>{ const v=scores[it.id]; if(v&&v>0){tw+=it.peso;ts+=v*it.peso;} });
+  return tw ? Math.round((ts/(tw*5))*100) : null;
+}
+function calcFinal(rh,lid,role){
+  let t=0,w=0;
+  if(rh!==null){t+=rh*0.3;w+=0.3;} if(lid!==null){t+=lid*0.3;w+=0.3;} if(role!==null){t+=role*0.4;w+=0.4;}
+  return w ? Math.round(t/w) : null;
+}
+function getNota(pct,elim){ if(elim) return 'Eliminatório'; if(pct===null) return null; if(pct>=75) return 'Nota 1'; if(pct>=65) return 'Nota 2'; return 'Nota 3'; }
+function getNotaLabel(n){ return n==='Nota 1'?'Nota 1 — Forte':n==='Nota 2'?'Nota 2 — Dúvida':n==='Nota 3'?'Nota 3 — Reprovado':n==='Eliminatório'?'Eliminatório':n||'—'; }
+function getSen(anos){ if(anos<3) return 'Jr'; if(anos<5) return 'Pl'; return 'Sr'; }
+function senLabel(s){ return s==='Jr'?'Júnior':s==='Pl'?'Pleno':s==='Sr'?'Sênior':s||'—'; }
+function notaCls(n){ return n==='Nota 1'?'badge-forte':n==='Nota 2'?'badge-duvida':(n==='Nota 3'||n==='Eliminatório')?'badge-reprov':''; }
+function senCls(s){ return s==='Jr'?'badge-jr':s==='Pl'?'badge-pl':s==='Sr'?'badge-sr':''; }
+
+
+const RUBRICA = {
+  // Generic scale
+  _default: {1:"Muito abaixo: nao demonstra ou atrapalha.",3:"Esperado: cumpre o basico.",5:"Referencia: domina e gera impacto."},
+  // Specific
+  comunicacao_obj: {1:"Fala confusa, longa, sem estrutura.",3:"Comunica de forma compreensivel.",5:"Impacto, precisao, conduz a conversa com seguranca."},
+  motivacao:       {1:"Nao quer vender ou prospectar.",3:"Tem interesse, ainda generico.",5:"Movido por meta e prospeccao. Traz exemplos."},
+  coachability:    {1:"Reage mal a feedback.",3:"Aceita e tenta aplicar.",5:"Busca feedback e melhora na hora."},
+  int_comercial:   {1:"Nao enxerga logica de venda.",3:"Entende o basico do funil.",5:"Raciocina como dono do numero."},
+  criar_demanda:   {1:"So reage, nao provoca.",3:"Levanta alguma necessidade.",5:"Transforma conta fria em oportunidade clara."},
+  contorno:        {1:"Trava na objecao.",3:"Contorna o basico.",5:"Usa a objecao para avançar a conversa."},
+  adapt:           {1:"Nao muda quando o cenario muda.",3:"Ajusta quando orientado.",5:"Muda de chave sozinho e melhora."},
+  compromisso:     {1:"Encerra sem proximo passo.",3:"Combina um proximo passo generico.",5:"Fecha compromisso firme e reduz no-show."},
+};
+
+function getRubrica(id, n) {
+  const r = RUBRICA[id] || RUBRICA._default;
+  if (n <= 2) return r[1] || RUBRICA._default[1];
+  if (n === 3) return r[3] || RUBRICA._default[3];
+  return r[5] || RUBRICA._default[5];
+}
+
+
+// ── AUTO-ADVANCE ──────────────────────────────────────────────────
+function checkAdvance(panel) {
+  if (panel === 'triagem') {
+    const sup = tS['superior'] === 'Sim';
+    const outros = ['venda_ativa','volume','sdr_1ano','comunicacao_cv'].filter(k=>tS[k]==='Sim').length;
+    const filled = Object.keys(tS).length >= 5;
+    const passa = filled && sup && outros >= 3;
+    const banner = document.getElementById('adv-triagem');
+    if (banner) banner.classList.toggle('show', passa);
+  }
+  if (panel === 'rh') {
+    const pct = calcBlock(RH_DEF, rhS);
+    const allFilled = RH_DEF.every(it => rhS[it.id] > 0);
+    const banner = document.getElementById('adv-rh');
+    if (banner) banner.classList.toggle('show', allFilled && pct !== null && pct >= 65);
+  }
+  if (panel === 'lid') {
+    const pct = calcBlock(LID_DEF, lidS);
+    const allFilled = LID_DEF.every(it => lidS[it.id] > 0);
+    const banner = document.getElementById('adv-lid');
+    if (banner) banner.classList.toggle('show', allFilled && pct !== null);
+  }
+  if (panel === 'role') {
+    const pct = calcBlock(ROLE_DEF, roleS);
+    const allFilled = ROLE_DEF.every(it => roleS[it.id] > 0);
+    const banner = document.getElementById('adv-role');
+    if (banner) banner.classList.toggle('show', allFilled && pct !== null);
+  }
+}
+
+function doAdvance(etapa, bannerId, tabIdx) {
+  // Update etapa select if provided
+  if (etapa) {
+    const sel = document.getElementById('f-etapa-c');
+    if (sel) sel.value = etapa;
+  }
+  // Navigate to tab if tabIdx provided
+  if (tabIdx !== undefined) {
+    const tabs = document.querySelectorAll('.modal-tab');
+    if (tabs[tabIdx]) switchMTab(tabIdx, tabs[tabIdx]);
+  }
+  dismissAdvance(bannerId);
+}
+
+function dismissAdvance(bannerId) {
+  const el = document.getElementById(bannerId);
+  if (el) el.classList.remove('show');
+}
+
+// ── RENDER ALL ──────────────────────────────────────────────────────
+function renderAll(){
+  renderMetrics();
+  renderKanban();
+  renderLista();
+}
+
+function renderMetrics(){
+  const total=candidates.length;
+  const proc=candidates.filter(c=>!['Aprovado','Reprovado'].includes(c.etapa)).length;
+  const aprov=candidates.filter(c=>c.etapa==='Aprovado').length;
+  const reprov=candidates.filter(c=>c.etapa==='Reprovado').length;
+  const conv=total?Math.round((aprov/total)*100):0;
+  document.getElementById('metrics').innerHTML=
+    '<div class="metric m-blue"><div class="metric-label">Total</div><div class="metric-value">'+total+'</div></div>'+
+    '<div class="metric m-purple"><div class="metric-label">Em processo</div><div class="metric-value">'+proc+'</div></div>'+
+    '<div class="metric m-green"><div class="metric-label">Aprovados</div><div class="metric-value">'+aprov+'</div></div>'+
+    '<div class="metric m-red"><div class="metric-label">Reprovados</div><div class="metric-value">'+reprov+'</div></div>'+
+    '<div class="metric m-amber"><div class="metric-label">Conversão</div><div class="metric-value">'+conv+'%</div><div class="metric-sub">total → aprovado</div></div>';
+}
+
+function renderKanban(){
+  const cols=[
+    {id:'Triagem',cls:'col-triagem'},{id:'RH',cls:'col-rh',label:'RH / People'},
+    {id:'Liderança',cls:'col-lideranca'},{id:'Roleplay',cls:'col-roleplay'},
+    {id:'Aprovado',cls:'col-aprovado'},{id:'Reprovado',cls:'col-reprovado'},
+  ];
+  document.getElementById('kanban-board').innerHTML=cols.map(col=>{
+    const label=col.label||col.id;
+    const cc=candidates.filter(c=>c.etapa===col.id);
+    return '<div class="kanban-col '+col.cls+'">'+
+      '<div class="kanban-col-head"><span class="kanban-col-title">'+label+'</span><span class="kanban-col-count">'+cc.length+'</span></div>'+
+      '<div class="kanban-cards">'+
+      (cc.length ? cc.map(c=>
+        '<div class="k-card" onclick="openEdit(\''+ c.id +'\')">'+
+        '<div class="k-card-name">'+c.nome+'</div>'+
+        '<div class="k-card-date">'+fmtDate(c.data)+'</div>'+
+        '<div class="k-card-meta">'+
+        (c.senioridade?'<span class="badge '+senCls(c.senioridade)+'">'+senLabel(c.senioridade)+'</span>':'')+
+        (c.pFinal!==null&&c.pFinal!==undefined?'<span class="badge '+notaCls(c.nota)+'">'+c.pFinal+'%</span>':'')+
+        (c.eliminado?'<span class="badge badge-elim">Elim.</span>':'')+
+        '</div>'+
+        '<div class="k-card-recruiter">👤 '+( c.recrutador||'—')+'</div>'+
+        '</div>'
+      ).join('') : '<div style="font-size:12px;color:var(--t3);text-align:center;padding:16px 0;">Vazio</div>')+
+      '</div></div>';
+  }).join('');
+}
+
+function renderLista(){
+  const fe=document.getElementById('fl-etapa').value;
+  const fs=document.getElementById('fl-sen').value;
+  const fr=document.getElementById('fl-rec').value;
+  const fn=document.getElementById('fl-nota').value;
+  const fb=(document.getElementById('fl-busca').value||'').toLowerCase();
+  // recrutador filter is static dropdown
+  const list=candidates.filter(c=>
+    (!fe||c.etapa===fe)&&(!fs||c.senioridade===fs)&&(!fr||c.recrutador===fr)&&
+    (!fn||(c.nota||'').startsWith(fn))&&(!fb||(c.nome||'').toLowerCase().includes(fb))
+  );
+  const tbody=document.getElementById('lista-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="11" class="empty-state">Nenhum candidato encontrado</td></tr>';return;}
+  const notaColors={'Nota 1':'color:var(--green)','Nota 2':'color:var(--amber)','Nota 3':'color:var(--red)','Eliminatório':'color:var(--red)'};
+  tbody.innerHTML=list.map(c=>
+    '<tr style="cursor:pointer" onclick="openEdit(\''+ c.id +'\')">'+
+    '<td class="td-name">'+c.nome+'</td>'+
+    '<td>'+( c.recrutador||'—')+'</td>'+
+    '<td>'+c.etapa+'</td>'+
+    '<td>'+(c.senioridade?'<span class="badge '+senCls(c.senioridade)+'">'+senLabel(c.senioridade)+'</span>':'—')+'</td>'+
+    '<td>'+(c.pRH!==null&&c.pRH!==undefined?c.pRH+'%':'—')+'</td>'+
+    '<td>'+(c.pLid!==null&&c.pLid!==undefined?c.pLid+'%':'—')+'</td>'+
+    '<td>'+(c.pRole!==null&&c.pRole!==undefined?c.pRole+'%':'—')+'</td>'+
+    '<td style="font-weight:600">'+(c.pFinal!==null&&c.pFinal!==undefined?c.pFinal+'%':'—')+'</td>'+
+    '<td style="font-weight:600;'+(notaColors[c.nota]||'')+'">'+getNotaLabel(c.nota)+'</td>'+
+    '<td>'+fmtDate(c.data)+'</td>'+
+    '<td><button class="btn" onclick="event.stopPropagation();openEdit(\''+ c.id +'\')" style="font-size:11px;padding:4px 8px;">✏</button></td>'+
+    '</tr>'
+  ).join('');
+}
+
+function renderDados(){
+  const colors=COL_COLORS;
+  const bar=(label,val,max,color,pct)=>
+    '<div class="funnel-row">'+
+    '<div class="funnel-label">'+label+'</div>'+
+    '<div class="funnel-track"><div class="funnel-fill" style="width:'+(max?Math.round((val/max)*100):0)+'%;background:'+color+'"></div></div>'+
+    '<div class="funnel-val">'+val+'</div>'+
+    (pct!==undefined?'<div class="funnel-pct">'+pct+'%</div>':'<div class="funnel-pct"></div>')+
+    '</div>';
+  const maxE=Math.max(...ETAPAS.map(e=>candidates.filter(c=>c.etapa===e).length),1);
+  let prev=null;
+  document.getElementById('funil-chart').innerHTML=ETAPAS.map((e,i)=>{
+    const count=candidates.filter(c=>c.etapa===e).length;
+    const conv=prev!==null&&prev>0?Math.round((count/prev)*100):undefined;
+    prev=count; return bar(e,count,maxE,colors[i],conv);
+  }).join('');
+  const senC={Jr:0,Pl:0,Sr:0};
+  candidates.forEach(c=>{if(c.senioridade)senC[c.senioridade]++;});
+  document.getElementById('sen-pills').innerHTML=
+    '<div class="sen-pill"><div class="sen-pill-val" style="color:#1a52a0">'+senC.Jr+'</div><div class="sen-pill-label">Júnior</div></div>'+
+    '<div class="sen-pill"><div class="sen-pill-val" style="color:#5a3a9a">'+senC.Pl+'</div><div class="sen-pill-label">Pleno</div></div>'+
+    '<div class="sen-pill"><div class="sen-pill-val" style="color:#8a5a00">'+senC.Sr+'</div><div class="sen-pill-label">Sênior</div></div>';
+  const res={'Nota 1':0,'Nota 2':0,'Nota 3':0,'Eliminatório':0};
+  candidates.forEach(c=>{if(c.nota)res[c.nota]++;});
+  const maxR=Math.max(...Object.values(res),1);
+  document.getElementById('result-chart').innerHTML=Object.entries(res).map(([k,v],i)=>bar(k,v,maxR,colors[i])).join('');
+  const avg=(key,cid)=>{
+    const vals=candidates.filter(c=>c[key]!==null&&c[key]!==undefined).map(c=>c[key]);
+    const a=vals.length?Math.round(vals.reduce((s,v)=>s+v,0)/vals.length):null;
+    document.getElementById(cid).innerHTML=a!==null
+      ?'<div class="avg-big" style="color:'+(a>=75?'var(--green)':a>=65?'var(--amber)':'var(--red)')+'">'+a+'%</div><div style="font-size:12px;color:var(--t3);margin-top:4px;">média de '+vals.length+' avaliação(ões)</div>'
+      :'<div style="font-size:13px;color:var(--t3);">Sem dados ainda</div>';
+  };
+  avg('pRH','avg-rh'); avg('pLid','avg-lid'); avg('pRole','avg-role');
+}
+
+// ── VIEW SWITCH ──────────────────────────────────────────────────────
+function switchView(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='dados') renderDados();
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────
+function switchMTab(idx,el){
+  document.querySelectorAll('.mpanel').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(idx===6) updateConsol();
+}
+
+function buildTriagemUI(){
+  document.getElementById('triagem-items').innerHTML=TRIAGEM_DEF.map(it=>
+    '<div class="triagem-item" id="ti-'+it.id+'">'+
+    '<div class="triagem-text">'+it.label+(it.obrig?' <span style="color:var(--red);font-size:11px;">(obrigatório)</span>':'')+
+    '<div class="triagem-sub">'+it.sub+'</div></div>'+
+    '<div style="display:flex;gap:4px;">'+
+    '<button class="t-btn" id="ts-'+it.id+'" onclick="setTri(\''+ it.id +'\',\'Sim\')">Sim</button>'+
+    '<button class="t-btn" id="tn-'+it.id+'" onclick="setTri(\''+ it.id +'\',\'Não\')">Não</button>'+
+    '</div></div>'
+  ).join('');
+}
+
+function setTri(id,val){
+  tS[id]=val;
+  document.getElementById('ti-'+id).className='triagem-item '+(val==='Sim'?'tri-sim':'tri-nao');
+  document.getElementById('ts-'+id).className='t-btn'+(val==='Sim'?' sim-active':'');
+  document.getElementById('tn-'+id).className='t-btn'+(val==='Não'?' nao-active':'');
+  updateTriResult();
+}
+
+function updateTriResult(){
+  const sup=tS['superior']==='Sim';
+  const outros=['venda_ativa','volume','sdr_1ano','comunicacao_cv'].filter(k=>tS[k]==='Sim').length;
+  const filled=TRIAGEM_DEF.filter(it=>tS[it.id]).length;
+  const el=document.getElementById('triagem-result');
+  if(filled<TRIAGEM_DEF.length){el.className='triagem-result tri-res-pend';el.textContent='Preencha todos os campos';const b=document.getElementById('adv-triagem');if(b)b.classList.remove('show');return;}
+  if(!sup){el.className='triagem-result tri-res-nao';el.textContent='✕ Não passa — Ensino Superior ausente';return;}
+  if(outros>=3){el.className='triagem-result tri-res-passa';el.textContent='✓ Passa — '+outros+' de 4 sinais + Ensino Superior';return;}
+  el.className='triagem-result tri-res-nao';el.textContent='✕ Não passa — apenas '+outros+' de 4 sinais (mínimo 3)';
+}
+
+function buildScoreUI(containerId,def,prefix,guides){
+  document.getElementById(containerId).innerHTML=def.map(it=>{
+    const g=guides&&guides[it.id];
+    const guideHtml=g?
+      '<div class="score-guide" id="sg-'+prefix+'-'+it.id+'" style="display:none;">'+
+      '<div class="sg-pergunta">"'+g.pergunta+'"</div>'+
+      (g.esperado?'<div class="sg-esperado">✓ '+g.esperado+'</div>':'')+
+      g.gatilhos.map(gt=>'<div class="sg-gatilho">↳ "'+gt+'"</div>').join('')+
+      '</div>':''
+    ;
+    const guideBtn=g?
+      '<button class="sg-toggle" onclick="toggleGuide(\''+prefix+'\',\''+it.id+'\')">ver pergunta</button>':''
+    ;
+    return '<div class="score-item-wrap">'+
+      '<div class="score-item">'+
+      '<span class="score-item-label">'+it.label+'</span>'+
+      guideBtn+
+      '<span class="score-item-weight">P'+it.peso+'</span>'+
+      '<div class="score-stars" id="st-'+prefix+'-'+it.id+'">'+
+      [1,2,3,4,5].map(n=>'<div class="star" onclick="setStar(\''+ prefix +'\',\''+it.id+'\','+n+')">'+n+'</div>').join('')+
+      '</div></div>'+
+      guideHtml+
+      '</div>';
+  }).join('');
+}
+
+function toggleGuide(prefix,id){
+  const el=document.getElementById('sg-'+prefix+'-'+id);
+  const btn=el&&el.previousElementSibling&&el.previousElementSibling.querySelector('.sg-toggle');
+  if(!el) return;
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  // update button text
+  const btns=document.querySelectorAll('.sg-toggle');
+  btns.forEach(b=>{
+    if(b.closest('.score-item-wrap')===el.closest('.score-item-wrap')){
+      b.textContent=open?'fechar':'ver pergunta';
+      b.classList.toggle('sg-toggle-open',open);
+    }
+  });
+}
+
+function setStar(prefix,id,n){
+  const map={rh:rhS,lid:lidS,role:roleS};
+  map[prefix][id]=n;
+  document.querySelectorAll('#st-'+prefix+'-'+id+' .star').forEach((s,i)=>s.classList.toggle('lit',i<n));
+  updateBlockTotal(prefix);
+  // Show rubrica hint
+  const wrap=document.querySelector('#st-'+prefix+'-'+id)&&document.querySelector('#st-'+prefix+'-'+id).closest('.score-item-wrap');
+  if(wrap){
+    let hint=wrap.querySelector('.rubrica-hint');
+    if(!hint){hint=document.createElement('div');hint.className='rubrica-hint';wrap.appendChild(hint);}
+    hint.textContent=getRubrica(id,n);
+    hint.style.display='block';
+    clearTimeout(hint._t);
+    hint._t=setTimeout(()=>{hint.style.display='none';},3500);
+  }
+}
+
+function updateBlockTotal(prefix){
+  const def={rh:RH_DEF,lid:LID_DEF,role:ROLE_DEF}[prefix];
+  const scores={rh:rhS,lid:lidS,role:roleS}[prefix];
+  const pct=calcBlock(def,scores);
+  const el=document.getElementById(prefix+'-total');
+  if(pct===null){el.textContent='—';el.className='score-total-val';return;}
+  el.textContent=pct+'%';
+  el.className='score-total-val '+(pct>=75?'forte':pct>=65?'duvida':'reprov');
+  if(prefix==='rh'){
+    document.getElementById('rh-floor-msg').textContent=pct<65?'⚠ Floor comportamental não atingido (< 65%) — eliminatório':'';
+  }
+}
+
+function buildElimUI(){
+  document.getElementById('elim-items').innerHTML=ELIM_DEF.map((label,i)=>
+    '<div class="elim-item" id="el-'+i+'">'+
+    '<span class="elim-label">'+label+'</span>'+
+    '<div style="display:flex;gap:4px;">'+
+    '<button class="t-btn" id="en-'+i+'" onclick="setElim('+i+',\'Não\')">Não</button>'+
+    '<button class="t-btn" id="es-'+i+'" onclick="setElim('+i+',\'Sim\')">Sim</button>'+
+    '</div></div>'
+  ).join('');
+}
+
+function setElim(i,val){
+  elimS[i]=val;
+  document.getElementById('el-'+i).classList.toggle('elim-sim',val==='Sim');
+  document.getElementById('es-'+i).className='t-btn'+(val==='Sim'?' nao-active':'');
+  document.getElementById('en-'+i).className='t-btn'+(val==='Não'?' sim-active':'');
+  const any=Object.values(elimS).includes('Sim');
+  const el=document.getElementById('elim-result');
+  el.className='triagem-result '+(any?'tri-res-nao':'tri-res-passa');
+  el.textContent=any?'✕ Flag eliminatório ativo — candidato reprovado':'✓ Sem flags eliminatórios';
+}
+
+function calcSen(){
+  const anos=parseFloat(document.getElementById('f-anos').value);
+  const el=document.getElementById('sen-estimada');
+  const tag=document.getElementById('modal-sen-tag');
+  if(isNaN(anos)){el.textContent='Preencha →';tag.innerHTML='';return;}
+  const s=getSen(anos);
+  const cls=s==='Jr'?'jr':s==='Pl'?'pl':'sr';
+  el.innerHTML='<span class="sen-tag '+cls+'">'+senLabel(s)+'</span>';
+  tag.innerHTML='<span class="sen-tag '+cls+'">'+s+'</span>';
+}
+
+function updateConsol(){
+  const pRH=calcBlock(RH_DEF,rhS);
+  const pLid=calcBlock(LID_DEF,lidS);
+  const pRole=calcBlock(ROLE_DEF,roleS);
+  const pFinal=calcFinal(pRH,pLid,pRole);
+  const anyElim=Object.values(elimS).includes('Sim');
+  const floor=pRH!==null&&pRH<65;
+  const elim=anyElim||floor;
+  const nota=getNota(pFinal,elim);
+  const anos=parseFloat(document.getElementById('f-anos').value);
+  const sen=isNaN(anos)?null:getSen(anos);
+  const fcolor=elim?'var(--red)':pFinal>=75?'var(--green)':pFinal>=65?'var(--amber)':'var(--red)';
+  document.getElementById('consol-scores').innerHTML=
+    '<div class="consol-row"><span class="consol-row-label">% RH / People</span><span class="consol-row-val">'+(pRH!==null?pRH+'%':'—')+'</span></div>'+
+    '<div class="consol-row"><span class="consol-row-label">% Liderança Comercial</span><span class="consol-row-val">'+(pLid!==null?pLid+'%':'—')+'</span></div>'+
+    '<div class="consol-row"><span class="consol-row-label">% Roleplay</span><span class="consol-row-val">'+(pRole!==null?pRole+'%':'—')+'</span></div>'+
+    '<div style="height:1px;background:var(--border);margin:7px 0;"></div>'+
+    '<div class="consol-row"><span class="consol-row-label" style="font-weight:600">% Final</span><span class="consol-final" style="color:'+fcolor+'">'+(pFinal!==null?pFinal+'%':'—')+'</span></div>'+
+    '<div class="consol-row"><span class="consol-row-label">Resultado</span><span class="consol-row-val">'+ getNotaLabel(nota)+'</span></div>'+
+    (elim?'<div class="alert alert-danger" style="margin-top:8px;">'+(anyElim?'Critério eliminatório ativo':'Floor comportamental < 65%')+'</div>':'')+
+    '<div style="font-size:11px;color:var(--t3);margin-top:6px;">Pesos: RH 30% · Liderança 30% · Roleplay 40%</div>';
+  const senEl=document.getElementById('consol-sen');
+  if(sen&&pFinal!==null&&!elim){
+    const ok=confirmarSen(sen,pRH||0,pFinal);
+    senEl.innerHTML='<div class="sen-confirm '+(ok?'match':'mismatch')+'">Estimado: '+senLabel(sen)+' · '+(ok?'✓ Confirmado pelo processo':'⚐ Abaixo do esperado para '+senLabel(sen))+'</div>';
+  } else senEl.innerHTML='';
+}
+
+function confirmarSen(s,comp,final){
+  const r={Jr:{c:65,f:65},Pl:{c:70,f:72},Sr:{c:75,f:78}}[s];
+  return r?comp>=r.c&&final>=r.f:false;
+}
+
+function setDec(val){
+  curDec=val;
+  ['ok','mid','ko'].forEach(k=>document.getElementById('dec-'+k).classList.remove('sel'));
+  if(val==='Aprovado') document.getElementById('dec-ok').classList.add('sel');
+  else if(val==='Segunda avaliação') document.getElementById('dec-mid').classList.add('sel');
+  else document.getElementById('dec-ko').classList.add('sel');
+}
+
+function openNew(){
+  editId=null; curDec=null; tS={}; rhS={}; lidS={}; roleS={}; elimS={};
+  document.getElementById('modal-title').textContent='Novo candidato';
+  document.getElementById('btn-del').style.display='none';
+  clearForm();
+  buildTriagemUI(); buildScoreUI('rh-items',RH_DEF,'rh',RH_GUIDES); buildScoreUI('lid-items',LID_DEF,'lid',LID_GUIDES);
+  buildScoreUI('role-items',ROLE_DEF,'role'); buildElimUI();
+  switchMTab(0,document.querySelector('.modal-tab'));
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEdit(id){
+  const c=candidates.find(x=>x.id===id); if(!c) return;
+  editId=id; curDec=c.decisao||null;
+  tS={...c.triagem}; rhS={...c.rhS}; lidS={...c.lidS}; roleS={...c.roleS}; elimS={...c.elimS};
+  document.getElementById('modal-title').textContent=c.nome;
+  document.getElementById('btn-del').style.display='';
+  document.getElementById('f-nome').value=c.nome||'';
+  document.getElementById('f-data').value=c.data||todayISO();
+  document.getElementById('f-recrutador').value=c.recrutador||'';
+  document.getElementById('f-coordenador').value=c.coordenador||'';
+  document.getElementById('f-solides').value=c.solides||'';
+  document.getElementById('f-canal').value=c.canal||'';
+  document.getElementById('f-anos').value=c.anosVendas!=null?c.anosVendas:'';
+  document.getElementById('f-etapa-c').value=c.etapa||'Triagem';
+  document.getElementById('f-obs').value=c.obs||'';
+  document.getElementById('t-aval').value=c.triagemAval||'';
+  document.getElementById('rh-aval').value=c.rhAval||'';
+  document.getElementById('lid-aval').value=c.lidAval||'';
+  document.getElementById('role-aval').value=c.roleAval||'';
+  document.getElementById('f-forca').value=c.forca||'';
+  document.getElementById('f-risco').value=c.risco||'';
+  document.getElementById('f-evidencias').value=c.evidencias||'';
+  document.getElementById('f-motivo').value=c.motivo||'';
+  calcSen();
+  buildTriagemUI(); Object.entries(tS).forEach(([k,v])=>setTri(k,v));
+  buildScoreUI('rh-items',RH_DEF,'rh',RH_GUIDES); Object.entries(rhS).forEach(([k,v])=>setStar('rh',k,parseInt(v)));
+  buildScoreUI('lid-items',LID_DEF,'lid',LID_GUIDES); Object.entries(lidS).forEach(([k,v])=>setStar('lid',k,parseInt(v)));
+  buildScoreUI('role-items',ROLE_DEF,'role'); Object.entries(roleS).forEach(([k,v])=>setStar('role',k,parseInt(v)));
+  buildElimUI(); Object.entries(elimS).forEach(([k,v])=>setElim(parseInt(k),v));
+  if(curDec) setDec(curDec);
+  switchMTab(0,document.querySelector('.modal-tab'));
+  document.getElementById('modal').classList.add('open');
+}
+
+function clearForm(){
+  ['f-nome','f-recrutador','f-coordenador','f-solides','f-obs','t-aval','rh-aval','lid-aval','role-aval','f-forca','f-risco','f-evidencias','f-motivo','f-anos'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('f-data').value=todayISO();
+  document.getElementById('f-canal').value='';
+  document.getElementById('f-etapa-c').value='Triagem';
+  document.getElementById('modal-sen-tag').innerHTML='';
+  document.getElementById('sen-estimada').textContent='Preencha →';
+  ['dec-ok','dec-mid','dec-ko'].forEach(k=>document.getElementById(k).classList.remove('sel'));
+  document.getElementById('rh-total').textContent='—';
+  document.getElementById('lid-total').textContent='—';
+  document.getElementById('role-total').textContent='—';
+  document.getElementById('rh-floor-msg').textContent='';
+  document.getElementById('consol-scores').textContent='—';
+  document.getElementById('consol-sen').innerHTML='';
+  document.getElementById('triagem-result').className='triagem-result tri-res-pend';
+  document.getElementById('triagem-result').textContent='Preencha os campos acima';
+  document.getElementById('elim-result').className='triagem-result tri-res-pend';
+  document.getElementById('elim-result').textContent='Sem flag eliminatório';
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('open'); editId=null; }
+
+function saveCand(){
+  const nome=document.getElementById('f-nome').value.trim();
+  if(!nome){alert('Informe o nome');return;}
+  const rec=document.getElementById('f-recrutador').value.trim();
+  if(!rec){alert('Informe o recrutador');return;}
+  const anos=parseFloat(document.getElementById('f-anos').value);
+  const sen=isNaN(anos)?null:getSen(anos);
+  const pRH=calcBlock(RH_DEF,rhS);
+  const pLid=calcBlock(LID_DEF,lidS);
+  const pRole=calcBlock(ROLE_DEF,roleS);
+  const pFinal=calcFinal(pRH,pLid,pRole);
+  const anyElim=Object.values(elimS).includes('Sim');
+  const floor=pRH!==null&&pRH<65;
+  const eliminado=anyElim||floor;
+  const nota=getNota(pFinal,eliminado);
+  const data={
+    nome,recrutador:rec,
+    coordenador:document.getElementById('f-coordenador').value.trim(),
+    data:document.getElementById('f-data').value,
+    solides:document.getElementById('f-solides').value.trim(),
+    canal:document.getElementById('f-canal').value,
+    anosVendas:isNaN(anos)?null:anos,senioridade:sen,
+    etapa:document.getElementById('f-etapa-c').value,
+    obs:document.getElementById('f-obs').value.trim(),
+    triagem:{...tS},triagemAval:document.getElementById('t-aval').value.trim(),
+    rhS:{...rhS},rhAval:document.getElementById('rh-aval').value.trim(),
+    lidS:{...lidS},lidAval:document.getElementById('lid-aval').value.trim(),
+    roleS:{...roleS},roleAval:document.getElementById('role-aval').value.trim(),
+    elimS:{...elimS},pRH,pLid,pRole,pFinal,eliminado,nota,decisao:curDec,
+    forca:document.getElementById('f-forca').value.trim(),
+    risco:document.getElementById('f-risco').value.trim(),
+    evidencias:document.getElementById('f-evidencias').value.trim(),
+    motivo:document.getElementById('f-motivo').value.trim(),
+  };
+  if(editId){
+    if(window.dbUpdate){
+      window.dbUpdate(editId, data).then(()=>{ closeModal(); }).catch(e=>{ console.error(e); });
+    } else {
+      const idx=candidates.findIndex(c=>c.id===editId);
+      if(idx>-1) candidates[idx]={...candidates[idx],...data};
+      saveLocal(); closeModal(); renderAll();
+    }
+  } else {
+    if(window.dbAdd){
+      window.dbAdd(data).then(()=>{ closeModal(); }).catch(e=>{ console.error(e); });
+    } else {
+      candidates.unshift({id:'c'+Date.now(),...data,createdAt:Date.now()});
+      saveLocal(); closeModal(); renderAll();
+    }
+  }
+}
+
+function deleteCand(){
+  if(!editId) return;
+  const c=candidates.find(x=>x.id===editId);
+  if(!c||!confirm('Remover '+c.nome+'?')) return;
+  if(window.dbDelete){
+    window.dbDelete(editId).then(()=>{ closeModal(); }).catch(e=>{ console.error(e); });
+  } else {
+    candidates=candidates.filter(x=>x.id!==editId);
+    saveLocal(); closeModal(); renderAll();
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.EXAMPLES = EXAMPLES;
+window.onCandidatesUpdated = function(cands) {
+  candidates = cands;
+  renderAll();
+};
+
+// Fallback: if Firebase hasn't loaded in 2s, use localStorage/examples
+setTimeout(() => {
+  if (!candidates || candidates.length === 0) {
+    candidates = JSON.parse(localStorage.getItem('sdr_v2') || 'null');
+    if (!candidates) { candidates = EXAMPLES; saveLocal(); }
+    renderAll();
+  }
+}, 2000);
+
+document.getElementById('f-data').value=todayISO();
+renderAll();
+</script>
+</body>
+</html>
